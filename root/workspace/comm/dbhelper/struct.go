@@ -8,7 +8,7 @@ import (
 
 	"github.com/huandu/go-sqlbuilder"
 
-	"pers.drcz/test/regex/log"
+	"pers.drcz/tests/sqlbuilder/comm/log"
 )
 
 type Struct struct {

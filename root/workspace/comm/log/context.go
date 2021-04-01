@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	basic "pers.drcz/test/regex/basic"
+	"pers.drcz/tests/sqlbuilder/comm/basic"
 )
 
 /* store log fields in context */
