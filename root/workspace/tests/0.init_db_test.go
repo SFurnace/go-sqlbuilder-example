@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/jaswdr/faker"
@@ -107,7 +108,7 @@ func TestGenerateData(t *testing.T) {
 /* Helpers */
 
 func generateCustomers(num int) []CustomerEx {
-	fake := faker.NewWithSeed(rand.NewSource(rand.Int63()))
+	fake := faker.NewWithSeed(rand.NewSource(time.Now().Unix()))
 	result := make([]CustomerEx, 0, num)
 	for i := 0; i < num; i++ {
 		result = append(result, CustomerEx{
@@ -128,7 +129,7 @@ func generateCustomers(num int) []CustomerEx {
 }
 
 func generateNodes(num int) []NodeEx {
-	fake := faker.NewWithSeed(rand.NewSource(rand.Int63()))
+	fake := faker.NewWithSeed(rand.NewSource(time.Now().Unix()))
 	result := make([]NodeEx, 0, num)
 	for i := 0; i < num; i++ {
 		result = append(result, NodeEx{
@@ -153,7 +154,7 @@ func generateNodes(num int) []NodeEx {
 }
 
 func generateDevices(num int, customers []CustomerEx, nodes []NodeEx) []DeviceEx {
-	fake := faker.NewWithSeed(rand.NewSource(rand.Int63()))
+	fake := faker.NewWithSeed(rand.NewSource(time.Now().Unix()))
 	result := make([]DeviceEx, 0, num)
 	for i := 0; i < num; i++ {
 		c, n := customers[rand.Intn(len(customers))], nodes[rand.Intn(len(nodes))]

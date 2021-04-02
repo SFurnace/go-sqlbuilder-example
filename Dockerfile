@@ -14,7 +14,6 @@ RUN mysql_install_db --user=mysql && \
   mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'tester'@'%' IDENTIFIED BY 'tester123'" && \
   mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'tester'@'localhost' IDENTIFIED BY 'tester123'" && \
   go get -u ./... && \
-  go mod download && \
   go test -c -o ./main ./tests && \
   ./main -test.run '^TestCreateDB$' && \
   ./main -test.run '^TestGenerateData$'
