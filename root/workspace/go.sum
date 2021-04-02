@@ -14,6 +14,8 @@ github.com/huandu/go-sqlbuilder v1.12.0 h1:QSmKkoIKaZTZBNROweq/c3wTxqXhuuAhbTWPt
 github.com/huandu/go-sqlbuilder v1.12.0/go.mod h1:LILlbQo0MOYjlIiGgOSR3UcWQpd5Y/oZ7HLNGyAUz0E=
 github.com/huandu/xstrings v1.3.2 h1:L18LIDzqlW6xN2rEkpdV8+oL/IXWJ1APd+vsdYy4Wdw=
 github.com/huandu/xstrings v1.3.2/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
+github.com/jaswdr/faker v1.3.0 h1:zkSkC6+khN6Pf3H6nDfeErq0NenDKGnHowEtSDaXWwI=
+github.com/jaswdr/faker v1.3.0/go.mod h1:x7ZlyB1AZqwqKZgyQlnqEG8FDptmHlncA5u2zY/yi6w=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=

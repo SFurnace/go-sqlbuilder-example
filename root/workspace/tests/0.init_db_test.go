@@ -1,10 +1,16 @@
 package tests
 
 import (
+	"encoding/json"
 	"fmt"
+	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/jaswdr/faker"
+
+	"pers.drcz/tests/sqlbuilder/comm/log"
 )
 
 // 生成测试用的数据表
@@ -26,7 +32,7 @@ func TestCreateDB(t *testing.T) {
 			"PRIMARY KEY (`id`),",
 			"UNIQUE KEY `uin` (`uin`),",
 			"UNIQUE KEY `index_appid` (`appId`)",
-		),
+		).Option("CHARSET=utf8"),
 
 		sqlbuilder.CreateTable(NodeTable).IfNotExists().Define(
 			"`idcId` int(11) NOT NULL DEFAULT '0' COMMENT '机房id',",
@@ -46,7 +52,7 @@ func TestCreateDB(t *testing.T) {
 			"`updateTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',",
 			"PRIMARY KEY (`zoneId`),",
 			"KEY `index_zone_to_node` (`zone`)",
-		),
+		).Option("CHARSET=utf8"),
 
 		sqlbuilder.CreateTable(DeviceTable).IfNotExists().Define(
 			"`instanceId` varchar(255) NOT NULL COMMENT '实例ID',",
@@ -59,14 +65,13 @@ func TestCreateDB(t *testing.T) {
 			"`updateTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',",
 			"`terminateTime` datetime NOT NULL DEFAULT '2099-12-31 23:59:59',",
 			"PRIMARY KEY (`instanceId`)",
-		),
+		).Option("CHARSET=utf8"),
 	}
 
 	for _, b := range builders {
 		expr, args := b.Build()
 		if _, err := DB.Exec(expr, args...); err != nil {
-			fmt.Println(err)
-			fmt.Println(expr)
+			t.Fatal(err)
 		} else {
 			fmt.Println("create table ok!")
 		}
@@ -75,5 +80,93 @@ func TestCreateDB(t *testing.T) {
 
 // 生成测试数据
 func TestGenerateData(t *testing.T) {
+	ctx := log.BackgroundCtxWithRandomId()
+	customers := generateCustomers(customerNum)
+	nodes := generateNodes(nodeNum)
+	devices := generateDevices(deviceNum, customers, nodes)
 
+	expr, args := SCustomerEx.InsertInto(CustomerTable, sqlbuilder.Flatten(customers)...).Build()
+	_, err := SCustomerEx.Exec(ctx, DB, expr, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expr, args = SNodeEx.InsertInto(NodeTable, sqlbuilder.Flatten(nodes)...).Build()
+	_, err = SNodeEx.Exec(ctx, DB, expr, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expr, args = SDeviceEx.InsertInto(DeviceTable, sqlbuilder.Flatten(devices)...).Build()
+	_, err = SDeviceEx.Exec(ctx, DB, expr, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+/* Helpers */
+
+func generateCustomers(num int) []CustomerEx {
+	fake := faker.NewWithSeed(rand.NewSource(rand.Int63()))
+	result := make([]CustomerEx, 0, num)
+	for i := 0; i < num; i++ {
+		result = append(result, CustomerEx{
+			Customer: Customer{
+				Uin:          fmt.Sprintf("10%d", fake.RandomNumber(10)),
+				AppID:        int64(fake.RandomNumber(10)),
+				CustomerName: fake.Company().Name(),
+				RemarkName:   fake.Company().Name(),
+			},
+			CustomerIndustry:  fake.Company().Name(),
+			CustomerArchitect: fake.Person().Name(),
+			CustomerSeller:    fake.Person().Name(),
+			PicUrl:            fake.Internet().URL(),
+			IndustryGrade:     fake.RandomStringElement(IndustryGrades),
+		})
+	}
+	return result
+}
+
+func generateNodes(num int) []NodeEx {
+	fake := faker.NewWithSeed(rand.NewSource(rand.Int63()))
+	result := make([]NodeEx, 0, num)
+	for i := 0; i < num; i++ {
+		result = append(result, NodeEx{
+			Node: Node{
+				IdcID:    fake.RandomNumber(6),
+				ZoneID:   fake.RandomNumber(8),
+				Zone:     fake.Address().StreetName(),
+				RegionID: fake.RandomNumber(8),
+				Region:   fake.Address().StreetName(),
+				State:    fake.RandomStringElement(NodeStateList),
+			},
+			Country:             "china",
+			Area:                fake.RandomStringElement(AreaList),
+			Province:            fake.RandomStringElement(ProvinceList),
+			City:                fake.RandomStringElement(CityList),
+			ISP:                 fake.RandomStringElement(ISPList),
+			InstanceFamilyTypes: json.RawMessage(fake.RandomStringElement(InstanceFamilyTypesList)),
+		})
+		result[i].ISPNum = len(strings.Split(result[i].ISP, ";"))
+	}
+	return result
+}
+
+func generateDevices(num int, customers []CustomerEx, nodes []NodeEx) []DeviceEx {
+	fake := faker.NewWithSeed(rand.NewSource(rand.Int63()))
+	result := make([]DeviceEx, 0, num)
+	for i := 0; i < num; i++ {
+		c, n := customers[rand.Intn(len(customers))], nodes[rand.Intn(len(nodes))]
+		result = append(result, DeviceEx{
+			Device: Device{
+				InstanceID:   makeID("ein", 8),
+				InstanceName: fake.App().Name(),
+				AppID:        c.AppID,
+				Zone:         n.Zone,
+				InstanceType: fake.RandomStringElement(InstanceTypeList),
+				State:        fake.RandomStringElement(InstanceStateList),
+			},
+		})
+	}
+	return result
 }
