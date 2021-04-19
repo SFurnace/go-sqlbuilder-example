@@ -26,7 +26,7 @@ go-sqlbuilder 提供了一组灵活且强大的 SQL 构造方法，帮助用户�
 
 为了方便演示，我从 ecm_websvr 库中拿了几个数据结构并简化了一下作为要处理的数据。
 
-演示使用的数据结构放在 [这里](./root/workspace/tests/datatype.go)。 各个例子在`root/workspace/test`文件夹下，且都可以用 Dockerfile 构建出的镜像运行。
+演示使用的数据结构放在 [datatype.go](./root/workspace/tests/datatype.go)。 各个例子在`root/workspace/test`文件夹下，且都可以用 Dockerfile 构建出的镜像运行。
 
 本文中主要介绍以`Builder`形式使用 go-sqlbuilder。FormatStyle/FreeStyle 请自行通过文档了解。
 
@@ -65,6 +65,8 @@ func TestSelect0(t *testing.T) {
 }
 ```
 
+##### sqlbuilder.List
+
 当在 SQL 中使用`IN`表达式而参数是`slice`时，可以用 sqlbuilder.List 把参数包装起来。
 
 ```go
@@ -80,6 +82,8 @@ func TestSelect1(t *testing.T) {
 	// [1 2 3 4 name0 name1 name2]
 }
 ```
+
+##### OR
 
 SQL 中的“或”表达式用法如下，多个条件可以分开收集。
 
@@ -243,33 +247,105 @@ func TestSubQueryWithJoin(t *testing.T) {
 
 #### Struct
 
+sqlbuilder 提供了`Struct`类型，它通过结构体类型中记录的静态信息帮你填充 Builder 中的内容，简化代码。
+
+_每个代表数据库返回结果的结构体都应有对应的`Struct`方便他人复用，其名称惯例使用"S结构体名称"。_ 示例中的结构体定义见 [datatype.go](./root/workspace/tests/datatype.go)。
+
+`Struct`类型上的方法分两类，一类用于构造`sqlbuilder.Builder`，一类用于构造`Rows.Scan()`方法使用的参数。
+
+无论哪类方法，都有其 Tag 版本的对应方法，可以通过 Tag 指定所使用 Struct Field 的范围。
+
+同时为了方便使用，我封装了使用 `Rows.Scan()` 等函数从数据库返回结果中提取数据的过程。代码实现见 [struct.go](./root/workspace/comm/dbhelper/struct.go)
+
+SELECT 语句示例：
+
+```go
+func TestSelectStruct(t *testing.T) {
+	b := SCustomerEx.SelectFrom(CustomerTable)
+	b.Where(b.Like("uin", "%tencent%"))
+
+	expr, args := b.Build()
+	fmt.Println(expr)
+	// SELECT t_customer.userIndustry, t_customer.userArchitect, t_customer.userSeller, t_customer.picUrl,
+	//   t_customer.industryGrade, t_customer.uin, t_customer.appId, t_customer.userName, t_customer.remarkName
+	// FROM t_customer WHERE uin LIKE ?
+	fmt.Println(args)
+	// [%tencent%]
+
+	var result []CustomerEx
+	if err := SCustomerEx.Query(context.Background(), DB, &result, expr, args); err != nil { // 获取数据
+		t.Fatal(err)
+	}
+	fmt.Println(result)
+}
+```
+
+Insert 语句示例：
+
+```go
+func TestGenerateData(t *testing.T) {
+	ctx := log.BackgroundCtxWithRandomId()
+	customers := generateCustomers(customerNum)
+	nodes := generateNodes(nodeNum)
+	devices := generateDevices(deviceNum, customers, nodes)  // 生成测试数据
+
+	expr, args := SCustomerEx.InsertInto(CustomerTable, sqlbuilder.Flatten(customers)...).Build()
+	_, err := SCustomerEx.Exec(ctx, DB, expr, args...)  // 插入客户表
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expr, args = SNodeEx.InsertInto(NodeTable, sqlbuilder.Flatten(nodes)...).Build()
+	_, err = SNodeEx.Exec(ctx, DB, expr, args...)  // 插入节点表
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expr, args = SDeviceEx.InsertInto(DeviceTable, sqlbuilder.Flatten(devices)...).Build()
+	_, err = SDeviceEx.Exec(ctx, DB, expr, args...)  // 插入设备表
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+```
+
+Tag 用法示例：
+
+```go
+func TestSelectStructTag(t *testing.T) {
+	b := SCustomer.SelectFromForTag("t_customer AS tc", "only_id").
+		JoinWithOption(sqlbuilder.InnerJoin, "t_device AS td", "tc.appId = td.appId")
+
+	expr, args := b.Build()
+	fmt.Println(expr)
+	// SELECT t_customer AS tc.uin, t_customer AS tc.appId FROM t_customer AS tc INNER JOIN t_device AS td ON tc.appId = td.appId
+	fmt.Println(args)
+	// []
+
+	var result []Customer
+	if err := SCustomer.Query(context.Background(), DB, &result, expr, args); err != nil {
+		t.Fatal(err)
+	}
+}
+```
+
 ---
 
 #### Struct Tags
 
-##### omitempty 默认只在 update 语句中生效
+sqlbuilder 处理 Field Tag 的完整逻辑如下：
 
-用`Struct`作为轻量级 ORM 的时候，可以使用 omitempty
+1. 不处理任何 un-exported 的 Field
+2. Exported Field 但没有任何 Field Tag，则使用 Field 名作为表中的 Column 名
+3. Field Tag`db`用于指定该 Field 在表中对应的 Column 名，`db:"-"`则代表应该忽略该 Field
+4. `fieldtag:"tag0,tag1"`代表在相关接口中指定 tag0 或 tag1 时，生成的 Builder 会使用此 Field
+5. `fieldopt:"withquote"`代表该 Field 在 SQL 中应该用`括起来
+6. `fieldopt:"omitempty"`代表该 Field 在值为零值时应该忽略
 
-##### omitempty 可以指定在多个 tag 下生效
+注意事项：
 
----
-
-#### Struct.Insert 不能用 sqlbuilder.List 作为参数
-
-`Struct`上的`InsertInto`、`ReplaceInto`等方法，可以接受变长参数但是不接收`sqlbuilder.List`的返回值作为参数。 由于`Struct`
-上的接口会忽略错误，调试时可能很难发现这种错误。_建议所有新增的 SQL 都在调试阶段用`Interpolate`函数检查一遍_
-
-```go
-// InsertInto creates a new`InsertBuilder`with table name using verb INSERT INTO.
-// By default, all exported fields of s are set as columns by calling`InsertBuilder#Cols`,
-// and value is added as a list of values by calling`InsertBuilder#Values`.
-//
-// InsertInto never returns any error.
-// If the type of any item in value is not expected, it will be ignored.
-// If value is an empty slice,`InsertBuilder#Values`will not be called.
-func (s *Struct) InsertInto(table string, value ...interface{}) *InsertBuilder
-```
+1. omitempty 默认仅在 UpdateBuilder 中生效
+2. 使用 omitempty(tag0,tag1) 可以让忽略行为仅在指定的 tag 下生效
 
 ---
 
@@ -289,8 +365,6 @@ func (s *Struct) QueryRow(ctx context.Context, db *sql.DB, result interface{}, e
 func (s *Struct) Exec(ctx context.Context, db *sql.DB, expr string, args ...interface{}) (sql.Result, error)
 ```
 
-_每个代表数据库返回结果的结构体都应有对应的 Struct方便他人复用，其名称惯例使用"S结构体名称"_
-
 ### 一些细节
 
 #### Var() 与 SQL() 的使用
@@ -305,7 +379,7 @@ func (c *Cond) Var(value interface{}) string
 `SQL`方法用于在 SQL 语句中插入任意内容。 为了明确`SQL`方法插入的位置，每种`Builder`中都会记录一个 marker，代表当前插入 SQL 的位置。
 
 ```go
-// Select 语句使用的 marker 列表
+// Select 语句的 marker 列表
 const (
 	selectMarkerInit injectionMarker = iota
 	selectMarkerAfterSelect
@@ -337,7 +411,7 @@ func TestSQLBase(t *testing.T) {
 }
 ```
 
-`Var` 与 `SQL` 结合，就可以自定义 sqlbuilder 中没有支持的表达式。_为了方便复用，建议自定义的表达式统一放在 dbhelper/utils.go 里_
+`Var`与`SQL`结合，就可以自定义 sqlbuilder 中没有支持的表达式。_为了方便复用，建议自定义的表达式统一放在 dbhelper/utils.go 里_
 
 ```go
 func REGEXP(c sqlbuilder.Cond, field, pat string) string {
@@ -354,6 +428,24 @@ func TestCustomerFunc(t *testing.T) {
 	fmt.Println(args)
 	// [.*tencent.*]
 }
+```
+
+---
+
+#### Struct.Insert 不能用 sqlbuilder.List 作为参数
+
+`Struct`上的`InsertInto`、`ReplaceInto`等方法，可以接受变长参数但是不接收`sqlbuilder.List`的返回值作为参数。 由于`Struct`
+上的接口会忽略错误，调试时可能很难发现这种错误。_建议所有新增的 SQL 都在调试阶段用`Interpolate`函数检查一遍_
+
+```go
+// InsertInto creates a new`InsertBuilder`with table name using verb INSERT INTO.
+// By default, all exported fields of s are set as columns by calling`InsertBuilder#Cols`,
+// and value is added as a list of values by calling`InsertBuilder#Values`.
+//
+// InsertInto never returns any error.
+// If the type of any item in value is not expected, it will be ignored.
+// If value is an empty slice,`InsertBuilder#Values`will not be called.
+func (s *Struct) InsertInto(table string, value ...interface{}) *InsertBuilder
 ```
 
 ---

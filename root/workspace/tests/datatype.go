@@ -11,8 +11,8 @@ import (
 
 type (
 	Customer struct {
-		Uin          string `db:"uin"`
-		AppID        int64  `db:"appId"`
+		Uin          string `db:"uin" fieldtag:"only_id"`
+		AppID        int64  `db:"appId" fieldtag:"only_id"`
 		CustomerName string `db:"userName"`
 		RemarkName   string `db:"remarkName"`
 	}
