@@ -198,16 +198,40 @@ func (sb *SelectBuilder) JoinWithOption(option JoinOption, table string, onExpr 
 
 #### 子查询
 
-子查询的写法很简单，只需用 `SelectBuilder` 上的 `BuilderAs` 方法为其他 `Builder` 起别名就能将其查询结果做为一张表使用了。
+子查询的写法很简单，将其他 `Builder` 作为参数直接使用即可。
 
 ```go
+func TestSubQuery(t *testing.T) {
+	s := sqlbuilder.Select("appId").From(CustomerTable)
+	s.Where(s.Like("userName", "%tencent%"))
 
+	b := sqlbuilder.Select("instanceId", "appId", "zone").From(DeviceTable)
+	b.Where(b.In("appId", s))
+
+	expr, args := b.Build()
+	fmt.Println(expr)
+	// SELECT instanceId, appId, zone FROM t_device WHERE appId IN (SELECT appId FROM t_customer WHERE userName LIKE ?)
+	fmt.Println(args)
+	// [%tencent%]
+}
 ```
 
-子查询也能在表连接等地方直接使用。
+在 From 子句或表连接中，用 `BuilderAs` 方法为其他 `Builder` 起别名就能将其查询结果做为一张表使用了。
 
 ```go
+func TestSubQueryWithJoin(t *testing.T) {
+	s := sqlbuilder.Select("appId").From(CustomerTable)
+	s.Where(s.Like("userName", "%tencent%"))
 
+	b := sqlbuilder.NewSelectBuilder()
+	b.Select("instanceId").From(b.As(DeviceTable, "td")).Join(b.BuilderAs(s, "tc"), "tc.appId = td.appId")
+
+	expr, args := b.Build()
+	fmt.Println(expr)
+	// SELECT instanceId FROM t_device AS td JOIN (SELECT appId FROM t_customer WHERE userName LIKE ?) AS tc ON tc.appId = td.appId
+	fmt.Println(args)
+	// [%tencent%]
+}
 ```
 
 ### 高级用法
@@ -234,16 +258,37 @@ func (sb *SelectBuilder) JoinWithOption(option JoinOption, table string, onExpr 
 
 #### 其他帮助函数
 
-##### Interpolate
+##### sqlbuilder.Interpolate
 
-##### Flatten
+`Interpolate` 函数可以将参数内插进 SQL 语句中，获得完整的 SQL 语句。在调试 SQL 语句或者 Driver 没有实现参数传递的情况下可以使用。
+
+```go
+func TestInterpolate(t *testing.T) {
+	b := sqlbuilder.Select("uin", "appId").From(CustomerTable)
+	b.Where(b.In("uin", "1", "2", "3", "4"))
+	b.Where(b.In("userName", sqlbuilder.List([]string{"name0", "name1", "name2"})))
+
+	fmt.Println(sqlbuilder.MySQL.Interpolate(b.Build()))
+	// SELECT uin, appId FROM t_customer WHERE uin IN ('1', '2', '3', '4') AND userName IN ('name0', 'name1', 'name2')
+}
+```
+
+##### sqlbuilder.Flatten
+
+将其他类型的切片转换成 `[]interface{}` 的帮助函数。
 
 ---
 
 #### NULL 字段的处理方法
 
+虽然我们应尽量避免表中存在 `Nullable` 的字段，若不能避免的话（如使用了 `JSON`/`TEXT` 类型的字段而且 MySQL 版本比较旧），有如下两种处理方法。
+
+1. 使用 database/sql 包中的 `NullString` 等类型
+2. 使用 `COALESCE` 函数来排除查询结果中的 `NULL` 值
+
 ---
 
-#### 数据库错误字段库
+#### 数据库错误处理
 
-
+根据数据库返回的错误信息对错误做处理是一个常见的诉求，使用社区维护的错误码库来判断错误类型是一种正确性较高的做法。 MySQL
+的错误码库可以使用 [https://github.com/VividCortex/mysqlerr](https://github.com/VividCortex/mysqlerr).

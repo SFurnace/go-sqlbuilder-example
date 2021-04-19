@@ -28,12 +28,29 @@ func TestJoinSimple(t *testing.T) {
 }
 
 func TestSubQuery(t *testing.T) {
-	b := sqlbuilder.NewSelectBuilder()
-	b.BuilderAs()
+	s := sqlbuilder.Select("appId").From(CustomerTable)
+	s.Where(s.Like("userName", "%tencent%"))
 
+	b := sqlbuilder.Select("instanceId", "appId", "zone").From(DeviceTable)
+	b.Where(b.In("appId", s))
 
+	expr, args := b.Build()
+	fmt.Println(expr)
+	// SELECT instanceId, appId, zone FROM t_device WHERE appId IN (SELECT appId FROM t_customer WHERE userName LIKE ?)
+	fmt.Println(args)
+	// [%tencent%]
 }
 
 func TestSubQueryWithJoin(t *testing.T) {
+	s := sqlbuilder.Select("appId").From(CustomerTable)
+	s.Where(s.Like("userName", "%tencent%"))
 
+	b := sqlbuilder.NewSelectBuilder()
+	b.Select("instanceId").From(b.As(DeviceTable, "td")).Join(b.BuilderAs(s, "tc"), "tc.appId = td.appId")
+
+	expr, args := b.Build()
+	fmt.Println(expr)
+	// SELECT instanceId FROM t_device AS td JOIN (SELECT appId FROM t_customer WHERE userName LIKE ?) AS tc ON tc.appId = td.appId
+	fmt.Println(args)
+	// [%tencent%]
 }
