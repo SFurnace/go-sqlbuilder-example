@@ -2,7 +2,7 @@
 
 > 文档：[link](https://pkg.go.dev/github.com/huandu/go-sqlbuilder)
 
-go-sqlbuilder 提供了一组灵活且强大的 SQL 构造方法，帮助用户构造可被标准库中提供的`db#Query`、`db#Exec`、`Rows#Scan`等方法使用的参数。
+go-sqlbuilder 提供了一组灵活且强大的 SQL 构造方法，帮助用户构造可被标准库中的`db.Query()`、`db.Exec()`、`Rows.Scan()`等方法使用的参数。
 
 [TOC]
 
@@ -16,7 +16,7 @@ go-sqlbuilder 提供了一组灵活且强大的 SQL 构造方法，帮助用户�
 
 ## Cons
 
-1. 对非标准的 SQL 语句支持较弱，需要用户掌握如何通过`Var`接口自行组装这类语句或者使用 FormatStyle/FreeStyle 的写法。
+1. 对非标准的 SQL 语句支持较弱，需要用户掌握通过`Var`接口自行组装语句或者使用 FormatStyle/FreeStyle 写法。
 2. 为了简化接口、方便使用，使用`Struct`组装 SQL 时会忽略各种错误，需要使用者保证参数的正确性。
 3. 没有提供从`Rows`等结构体中提取查询结果的方便函数，需要自己实现。
 
@@ -43,7 +43,7 @@ sqlbuilder 库提供了六个最基本的`Builder`，可以使用它们来构造
 
 每个 Builder 上都有`Build()`方法来返回最终的 SQL 字符串和参数列表。除此之外还有用来**收集参数**或者**构建 SQL** 的各类帮助函数。
 
-Builder 方法会返回 Builder 本身方便链式调用，帮助函数一般会返回 string 用于组合语句。
+构建 SQL 的方法会返回 Builder 本身方便链式调用，收集参数的方法一般会返回子语句的 string 用于组合。
 
 ---
 
@@ -67,7 +67,7 @@ func TestSelect0(t *testing.T) {
 
 ##### sqlbuilder.List
 
-当在 SQL 中使用`IN`表达式而参数是`slice`时，可以用 sqlbuilder.List 把参数包装起来。
+当在 SQL 中使用`IN`表达式而参数是`slice`时，可以用`sqlbuilder.List`把参数包装起来。
 
 ```go
 func TestSelect1(t *testing.T) {
@@ -344,7 +344,7 @@ sqlbuilder 处理 Field Tag 的完整逻辑如下：
 
 注意事项：
 
-1. omitempty 默认仅在 UpdateBuilder 中生效
+1. **omitempty 默认仅在 UpdateBuilder 中生效**
 2. 使用 omitempty(tag0,tag1) 可以让忽略行为仅在指定的 tag 下生效
 
 ---
