@@ -57,8 +57,8 @@ func TestSelectWithOr(t *testing.T) {
 
 func TestUpdateBasic(t *testing.T) {
 	b := sqlbuilder.Update(NodeTable)
-	b.Set(b.Assign("state", "OFFLINE"))
-	b.SetMore(b.Add("ispNum", 2)) // 添加赋值语句需要用 SetMore，用 Set 会覆盖掉之前的赋值
+	b.Set(b.Assign("state", "OFFLINE")) // 可接受变长参数
+	b.SetMore(b.Add("ispNum", 2))       // 添加赋值语句需要用 SetMore，用 Set 会覆盖掉之前的赋值
 	b.Where(b.Like("zone", "%beijing%"))
 
 	expr, args := b.Build()
