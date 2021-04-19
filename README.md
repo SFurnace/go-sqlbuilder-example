@@ -4,6 +4,8 @@
 
 go-sqlbuilder 提供了一组灵活且强大的 SQL 构造方法，帮助用户构造可被标准库中提供的 `db#Query`、`db#Exec`、`Rows#Scan` 等方法使用的参数。
 
+[TOC]
+
 ## Pros
 
 1. 避免手工构造 SQL，在需要依据复杂的条件逐步构造 SQL 时可以减少错误。
