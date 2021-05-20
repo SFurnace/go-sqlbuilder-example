@@ -1,7 +1,8 @@
-package tests
+package pkg
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/huandu/go-sqlbuilder"
@@ -9,6 +10,8 @@ import (
 	"pers.drcz/tests/sqlbuilder/comm/dbhelper"
 	ecmlog "pers.drcz/tests/sqlbuilder/comm/log"
 )
+
+var db *sql.DB
 
 // SCustomer ORM object to Customer
 var SCustomer = dbhelper.NewStruct(Customer{})
@@ -99,8 +102,8 @@ func PullCustomer(ctx context.Context, cond dbhelper.CondFunc) ([]Customer, erro
 	return PullTagCustomer(ctx, "", cond)
 }
 
-// ConvertCustomer ...
-func ConvertCustomer(customers []Customer, err error) (map[string]*Customer, error) {
+// MapNameToCustomer ...
+func MapNameToCustomer(customers []Customer, err error) (map[string]*Customer, error) {
 	if err != nil {
 		return nil, err
 	}

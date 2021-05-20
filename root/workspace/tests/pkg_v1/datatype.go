@@ -1,4 +1,4 @@
-package tests
+package pkg
 
 //go:generate sqlgen -name Customer
 type Customer struct {
