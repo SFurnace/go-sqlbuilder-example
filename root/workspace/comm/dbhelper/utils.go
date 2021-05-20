@@ -12,6 +12,13 @@ import (
 
 const unknownURI = "()"
 
+// objects insert ways
+const (
+	Insert       = "Insert"
+	InsertIgnore = "Insert Ignore"
+	Replace      = "Replace"
+)
+
 /* Type Definition */
 
 type (
@@ -21,8 +28,12 @@ type (
 		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	}
 
-	Cond     = *sqlbuilder.SelectBuilder
-	CondFunc func(b Cond)
+	Cond           = *sqlbuilder.SelectBuilder
+	CondFunc       func(Cond)
+	DelCond        = *sqlbuilder.DeleteBuilder
+	DelCondFunc    func(DelCond)
+	UpdateCond     = *sqlbuilder.UpdateBuilder
+	UpdateCondFunc func(UpdateCond)
 )
 
 var (
