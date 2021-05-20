@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -15,15 +16,17 @@ var (
 	ormPrefix    = flag.String("p", "", "prefix of orm object name")
 	table        = flag.String("tn", "", "table name")
 	tableVar     = flag.String("tv", "", "variable contains the table name")
+	dbVar        = flag.String("db", "db", "variable of db object")
 	outputFile   = flag.String("out", "stdin", "output file path")
 	outputPkg    = flag.String("pkg", "", "output package")
-	converterStr = flag.String("conv", "", "generate result map converters, format like: type:member;type:member...")
-	grouperStr   = flag.String("group", "", "generate result groupers, format like: type:member;type:member...")
+	converterStr = flag.String("conv", "", "generate result map converters, format like: member:type;member:type...")
+	grouperStr   = flag.String("group", "", "generate result groupers, format like: member:type;member:type...")
 
 	// calculated
-	structName, ormName, tableStr, outPkg string
-	outFile                               *os.File
-	converterMap, grouperMap              map[string]string
+	structName, structFullName, ormName, tableStr string
+	outPkg, extFilePath                           string
+	outFile                                       *os.File
+	converterMap, grouperMap                      = make(map[string]string), make(map[string]string)
 )
 
 func main() {
@@ -34,6 +37,16 @@ func main() {
 		genV1()
 	case 2:
 		// TODO
+	}
+
+	var (
+		extFile *os.File
+		err     error
+	)
+	if _, err = os.Stat(extFilePath); os.IsNotExist(err) {
+		if extFile, err = os.Create(extFilePath); err == nil {
+			_, _ = extFile.WriteString(fmt.Sprintf("package %s\n", outPkg))
+		}
 	}
 }
 
@@ -60,12 +73,12 @@ func checkName() {
 	ss := strings.Split(*name, ".")
 	switch {
 	case len(ss) == 1 && token.IsIdentifier(*name):
+		structName, structFullName = *name, *name
 	case len(ss) == 2 && token.IsIdentifier(ss[0]), token.IsIdentifier(ss[1]):
+		structName, structFullName = ss[1], *name
 	default:
 		failedExit("invalid struct type name: %s", *name)
 	}
-
-	structName = *name
 }
 
 func checkOrmName() {
@@ -77,7 +90,12 @@ func checkTableStr() {
 	if (*table != "" && *tableVar != "") || (*table == "" && *tableVar == "") {
 		failedExit("invalid table name")
 	}
-	tableStr = *table + *tableVar
+	if *table != "" {
+		tableStr = fmt.Sprintf(`"%s"`, *table)
+	}
+	if *tableVar != "" {
+		tableStr = *tableVar
+	}
 }
 
 func checkOutput() {
@@ -95,6 +113,9 @@ func checkOutput() {
 			failedExit("can't create output file")
 		}
 
+		d, f := filepath.Split(rel)
+		e := filepath.Ext(f)
+		extFilePath = filepath.Join(d, fmt.Sprintf("%s_ext%s", strings.TrimSuffix(f, e), e))
 		p, _ := filepath.Abs(rel)
 		outPkg = filepath.Base(filepath.Dir(p))
 	}
@@ -105,24 +126,28 @@ func checkOutput() {
 }
 
 func checkConverters() {
-	for _, pair := range strings.Split(*converterStr, ";") {
-		typ, mem := checkTypeToMemberStr(pair)
-		if _, seen := converterMap[mem]; seen {
-			failedExit("duplicated converter: %s", mem)
-		}
+	if *converterStr != "" {
+		for _, pair := range strings.Split(*converterStr, ";") {
+			mem, typ := checkTypeToMemberStr(pair)
+			if _, seen := converterMap[mem]; seen {
+				failedExit("duplicated converter: %s", mem)
+			}
 
-		converterMap[mem] = typ
+			converterMap[mem] = typ
+		}
 	}
 }
 
 func checkGroupers() {
-	for _, pair := range strings.Split(*grouperStr, ";") {
-		typ, mem := checkTypeToMemberStr(pair)
-		if _, seen := grouperMap[mem]; seen {
-			failedExit("duplicated grouper: %s", mem)
-		}
+	if *grouperStr != "" {
+		for _, pair := range strings.Split(*grouperStr, ";") {
+			mem, typ := checkTypeToMemberStr(pair)
+			if _, seen := grouperMap[mem]; seen {
+				failedExit("duplicated grouper: %s", mem)
+			}
 
-		grouperMap[mem] = typ
+			grouperMap[mem] = typ
+		}
 	}
 }
 
@@ -131,11 +156,11 @@ func checkTypeToMemberStr(str string) (string, string) {
 	if len(ss) != 2 {
 		failedExit("invalid converter: %s", str)
 	}
-	if !isValidMemberType(ss[0]) {
-		failedExit("invalid struct member type: %s", ss[0])
+	if !isValidMemberType(ss[1]) {
+		failedExit("invalid struct member type: %s", ss[1])
 	}
-	if !token.IsIdentifier(ss[1]) {
-		failedExit("invalid member name: %s", ss[1])
+	if !token.IsIdentifier(ss[0]) {
+		failedExit("invalid member name: %s", ss[0])
 	}
 	return ss[0], ss[1]
 }

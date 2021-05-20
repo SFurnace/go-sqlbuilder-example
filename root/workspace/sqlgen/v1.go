@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"path/filepath"
 	"text/template"
 )
 
@@ -14,7 +15,12 @@ func genV1() {
 	err := tmpl.Execute(buf, map[string]interface{}{
 		"dbHelperPkg": dbHelperPkg,
 		"ecmLogPkg":   ecmLogPkg,
+		"outPkg":      outPkg,
+		"extFile":     filepath.Base(extFilePath),
+		"table":       tableStr,
+		"db":          *dbVar,
 		"structName":  structName,
+		"fullName":    structFullName,
 		"ormName":     ormName,
 		"converters":  converterMap,
 		"groupers":    grouperMap,
