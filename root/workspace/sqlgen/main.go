@@ -18,11 +18,12 @@ var (
 	outputFile   = flag.String("out", "stdin", "output file path")
 	outputPkg    = flag.String("pkg", "", "output package")
 	converterStr = flag.String("conv", "", "generate result map converters, format like: type:member;type:member...")
+	grouperStr   = flag.String("group", "", "generate result groupers, format like: type:member;type:member...")
 
 	// calculated
 	structName, ormName, tableStr, outPkg string
 	outFile                               *os.File
-	converterMap                          map[string]string
+	converterMap, grouperMap              map[string]string
 )
 
 func main() {
@@ -44,6 +45,7 @@ func checkParam() {
 	checkTableStr()
 	checkOutput()
 	checkConverters()
+	checkGroupers()
 }
 
 func checkVersion() {
@@ -104,20 +106,36 @@ func checkOutput() {
 
 func checkConverters() {
 	for _, pair := range strings.Split(*converterStr, ";") {
-		ss := strings.Split(pair, ":")
-		if len(ss) != 2 {
-			failedExit("invalid converter: %s", pair)
-		}
-		if !isValidMemberType(ss[0]) {
-			failedExit("invalid struct member type: %s", ss[0])
-		}
-		if !token.IsIdentifier(ss[1]) {
-			failedExit("invalid member name: %s", ss[1])
-		}
-		if _, seen := converterMap[ss[1]]; seen {
-			failedExit("duplicated converter: %s", ss[1])
+		typ, mem := checkTypeToMemberStr(pair)
+		if _, seen := converterMap[mem]; seen {
+			failedExit("duplicated converter: %s", mem)
 		}
 
-		converterMap[ss[1]] = ss[0]
+		converterMap[mem] = typ
 	}
+}
+
+func checkGroupers() {
+	for _, pair := range strings.Split(*grouperStr, ";") {
+		typ, mem := checkTypeToMemberStr(pair)
+		if _, seen := grouperMap[mem]; seen {
+			failedExit("duplicated grouper: %s", mem)
+		}
+
+		grouperMap[mem] = typ
+	}
+}
+
+func checkTypeToMemberStr(str string) (string, string) {
+	ss := strings.Split(str, ":")
+	if len(ss) != 2 {
+		failedExit("invalid converter: %s", str)
+	}
+	if !isValidMemberType(ss[0]) {
+		failedExit("invalid struct member type: %s", ss[0])
+	}
+	if !token.IsIdentifier(ss[1]) {
+		failedExit("invalid member name: %s", ss[1])
+	}
+	return ss[0], ss[1]
 }

@@ -114,3 +114,16 @@ func MapNameToCustomer(customers []Customer, err error) (map[string]*Customer, e
 	}
 	return result, nil
 }
+
+// GroupCustomerByName ...
+func GroupCustomerByName(objs []Customer, err error) (map[string][]Customer, error) {
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]Customer)
+	for i := range objs {
+		result[objs[i].CustomerName] = append(result[objs[i].CustomerName], objs[i])
+	}
+	return result, nil
+}

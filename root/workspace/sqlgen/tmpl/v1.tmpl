@@ -1,0 +1,131 @@
+package
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+
+	"github.com/huandu/go-sqlbuilder"
+
+	{{ .dbHelperPkg }}
+	{{ .ecmLogPkg }}
+)
+
+// {{ .ormName }} ORM object to {{ .structName }}
+var {{ .ormName }} = dbhelper.NewStruct({{ .structName }}{})
+
+// Add{{ .structName }} ...
+func Add{{ .structName }}(ctx context.Context, way, tag string, objects ...interface{}) error {
+	var b *sqlbuilder.InsertBuilder
+	switch way {
+	case dbhelper.Insert:
+		b = {{ .ormName }}.InsertIntoForTag({{ .table }}, tag, objects...)
+	case dbhelper.InsertIgnore:
+		b = {{ .ormName }}.InsertIgnoreIntoForTag({{ .table }}, tag, objects...)
+	case dbhelper.Replace:
+		b = {{ .ormName }}.ReplaceIntoForTag({{ .table }}, tag, objects...)
+	default:
+		return fmt.Errorf("invalid insert way: %s", way)
+	}
+
+	expr, args := b.Build()
+	if _, err := {{ .ormName }}.Exec(ctx, db, expr, args...); err != nil {
+		ecmlog.ErrorEx(ctx, "Exec failed", "err", err)
+		return err
+	}
+	return nil
+}
+
+// Delete{{ .structName }} ...
+func Delete{{ .structName }}(ctx context.Context, cond dbhelper.DelCondFunc) error {
+	b := {{ .ormName }}.DeleteFrom({{ .table }})
+	cond(b)
+
+	expr, args := b.Build()
+	if _, err := {{ .ormName }}.Exec(ctx, db, expr, args...); err != nil {
+		ecmlog.ErrorEx(ctx, "Exec failed", "err", err)
+		return err
+	}
+	return nil
+}
+
+// Update{{ .structName }} ...
+func Update{{ .structName }}(ctx context.Context, cond dbhelper.UpdateCondFunc) error {
+	b := sqlbuilder.NewUpdateBuilder().Update({{ .table }})
+	cond(b)
+
+	expr, args := b.Build()
+	if _, err := {{ .ormName }}.Exec(ctx, db, expr, args...); err != nil {
+		ecmlog.ErrorEx(ctx, "Exec failed", "err", err)
+		return err
+	}
+	return nil
+}
+
+// GetTag{{ .structName }} ...
+func GetTag{{ .structName }}(ctx context.Context, tag string, cond dbhelper.CondFunc) (*{{ .structName }}, error) {
+	b := {{ .ormName }}.SelectFromForTag({{ .table }}, tag)
+	cond(b)
+
+	var result {{ .structName }}
+	expr, args := b.Build()
+	if err := {{ .ormName }}.TagQueryRow(ctx, db, &result, tag, expr, args...); err != nil {
+		ecmlog.ErrorEx(ctx, "TagQueryRow failed", "err", err)
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Get{{ .structName }} ...
+func Get{{ .structName }}(ctx context.Context, cond dbhelper.CondFunc) (*{{ .structName }}, error) {
+	return GetTag{{ .structName }}(ctx, "", cond)
+}
+
+// PullTag{{ .structName }} ...
+func PullTag{{ .structName }}(ctx context.Context, tag string, cond dbhelper.CondFunc) ([]{{ .structName }}, error) {
+	b := {{ .ormName }}.SelectFromForTag({{ .table }}, tag)
+	cond(b)
+
+	var result []{{ .structName }}
+	expr, args := b.Build()
+	if err := {{ .ormName }}.TagQuery(ctx, db, &result, tag, expr, args...); err != nil {
+		ecmlog.ErrorEx(ctx, "TagQuery failed", "err", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// Pull{{ .structName }} ...
+func Pull{{ .structName }}(ctx context.Context, cond dbhelper.CondFunc) ([]{{ .structName }}, error) {
+	return PullTag{{ .structName }}(ctx, "", cond)
+}
+
+{{ range $m, $t := .converters }}// Map{{$m}}To{{$.structName}} ...
+func Map{{$m}}To{{$.structName}}(objs []{{ $.structName }}, err error) (map[{{$t}}]*{{ $.structName }}, error) {
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[{{$t}}]*{{ $.structName }}, len(objs))
+	for i := range objs {
+		result[objs[i].{{$m}}] = &objs[i]
+	}
+	return result, nil
+}
+
+{{ end -}}
+
+{{ range $m, $t := .groupers }}// Group{{$.structName}}By{{$m}} ...
+func Group{{$.structName}}By{{$m}}(objs []{{ $.structName }}, err error) (map[{{$t}}][]{{ $.structName }}, error) {
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[{{$t}}][]{{ $.structName }})
+	for i := range objs {
+		result[objs[i].{{$m}}] = append(result[objs[i].{{$m}}], objs[i])
+	}
+	return result, nil
+}
+
+{{ end -}}
