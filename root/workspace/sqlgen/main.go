@@ -13,16 +13,16 @@ import (
 
 var (
 	// parameters
-	version      = flag.Int("v", 1, "version")
-	name         = flag.String("t", "", "result struct type name")
-	ormPrefix    = flag.String("p", "", "prefix of orm object name")
-	table        = flag.String("tn", "", "table name")
-	tableVar     = flag.String("tv", "", "variable contains the table name")
-	dbVar        = flag.String("db", "db", "variable of db object")
-	outputFile   = flag.String("out", "stdin", "output file path")
-	outputPkg    = flag.String("pkg", "", "output package")
-	converterStr = flag.String("conv", "", "generate result map converters, format like: member:type;member:type...")
-	grouperStr   = flag.String("group", "", "generate result groupers, format like: member:type;member:type...")
+	version    = flag.Int("v", 1, "version")
+	name       = flag.String("t", "", "result struct type name")
+	ormPrefix  = flag.String("p", "", "prefix of orm object name")
+	table      = flag.String("tn", "", "table name")
+	tableVar   = flag.String("tv", "", "variable contains the table name")
+	dbVar      = flag.String("db", "db", "variable of db object")
+	outputFile = flag.String("out", "stdin", "output file path")
+	outputPkg  = flag.String("pkg", "", "output package")
+	mapStr     = flag.String("map", "", "generate result mappers, format like: member:type;member:type...")
+	grouperStr = flag.String("group", "", "generate result groupers, format like: member:type;member:type...")
 
 	// calculated
 	structName, structFullName, ormName, tableStr string
@@ -89,7 +89,7 @@ func checkParam() {
 	checkOrmName()
 	checkTableStr()
 	checkOutput()
-	checkConverters()
+	checkMappers()
 	checkGroupers()
 }
 
@@ -159,12 +159,12 @@ func checkOutput() {
 	}
 }
 
-func checkConverters() {
-	if *converterStr != "" {
-		for _, pair := range strings.Split(*converterStr, ";") {
+func checkMappers() {
+	if *mapStr != "" {
+		for _, pair := range strings.Split(*mapStr, ";") {
 			mem, typ := checkTypeToMemberStr(pair)
 			if _, seen := converterMap[mem]; seen {
-				failedExit("duplicated converter: %s", mem)
+				failedExit("duplicated mapper: %s", mem)
 			}
 
 			converterMap[mem] = typ
@@ -188,7 +188,7 @@ func checkGroupers() {
 func checkTypeToMemberStr(str string) (string, string) {
 	ss := strings.Split(str, ":")
 	if len(ss) != 2 {
-		failedExit("invalid converter: %s", str)
+		failedExit("invalid pair: %s", str)
 	}
 	if !isValidMemberType(ss[1]) {
 		failedExit("invalid struct member type: %s", ss[1])

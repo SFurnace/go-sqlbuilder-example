@@ -1,6 +1,6 @@
 package pkg
 
-//go:generate sqlgen -v 2 -t pkg.Customer -tn t_customer -out dao/customer.go -db EcmAdminDB.DB -conv AppID:int64;Uin:int64 -group IndustryGrade:string
+//go:generate sqlgen -t pkg.Customer -tn t_customer -out dao/customer.go -db EcmAdminDB.DB -map AppID:int64;Uin:int64 -group IndustryGrade:string
 type Customer struct {
 	Uin               int64  `db:"uin"`
 	AppID             int64  `db:"appId"`
@@ -13,7 +13,7 @@ type Customer struct {
 	IndustryGrade     string `db:"industryGrade"` // 客户行业定级
 }
 
-//go:generate sqlgen -v 2 -t pkg.Node -tn t_node_info -out dao/node.go -db EcmDB.DB -conv ZoneID:int;Zone:string -group ISPNum:int;State:string
+//go:generate sqlgen -t pkg.Node -tn t_node_info -out dao/node.go -db EcmDB.DB -map ZoneID:int;Zone:string -group ISPNum:int;State:string
 type Node struct {
 	ZoneID              int    `db:"zoneId"`   // zone_id
 	Country             string `db:"country"`  // 国家
@@ -43,7 +43,7 @@ type Node struct {
 	IPV6Supported       int    `db:"ipv6Supported"`   // 是否支持ipv6
 }
 
-//go:generate sqlgen -v 2 -t pkg.Device -tn t_device_info -out dao/device.go -db EcmDB.DB -conv InstanceID:string -group AppID:int64;Zone:string;Region:string
+//go:generate sqlgen -t pkg.Device -tn t_device_info -out dao/device.go -db EcmDB.DB -map InstanceID:string -group AppID:int64;Zone:string;Region:string
 type Device struct {
 	InstanceID           string `db:"instanceId"`
 	ProjectID            int64  `db:"projectId"`
