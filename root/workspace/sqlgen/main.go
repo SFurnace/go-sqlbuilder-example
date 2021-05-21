@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 )
 
 var (
@@ -34,9 +36,9 @@ func main() {
 
 	switch *version {
 	case 1:
-		genV1()
+		generateContent("tmpl/v1.tmpl")
 	case 2:
-		// TODO
+		generateContent("tmpl/v2.tmpl")
 	}
 
 	var (
@@ -49,6 +51,36 @@ func main() {
 		}
 	}
 }
+
+/* generator */
+
+func generateContent(file string) {
+	defer outFile.Close()
+
+	buf := new(bytes.Buffer)
+	tmpl := template.Must(template.ParseFS(embeddedTemplates, file))
+	err := tmpl.Execute(buf, map[string]interface{}{
+		"dbHelperPkg": dbHelperPkg,
+		"ecmLogPkg":   ecmLogPkg,
+		"outPkg":      outPkg,
+		"extFile":     filepath.Base(extFilePath),
+		"table":       tableStr,
+		"db":          *dbVar,
+		"structName":  structName,
+		"fullName":    structFullName,
+		"ormName":     ormName,
+		"ormStruct":   strings.ToLower(structName) + "Model",
+		"converters":  converterMap,
+		"groupers":    grouperMap,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	_, _ = outFile.Write(buf.Bytes())
+}
+
+/* check helper */
 
 func checkParam() {
 	flag.Parse()
@@ -87,14 +119,16 @@ func checkOrmName() {
 }
 
 func checkTableStr() {
-	if (*table != "" && *tableVar != "") || (*table == "" && *tableVar == "") {
-		failedExit("invalid table name")
+	if *table == "" && *tableVar == "" {
+		failedExit("empty table name")
 	}
-	if *table != "" {
-		tableStr = fmt.Sprintf(`"%s"`, *table)
-	}
-	if *tableVar != "" {
+	switch {
+	case token.IsIdentifier(*tableVar):
 		tableStr = *tableVar
+	case *table != "":
+		tableStr = fmt.Sprintf(`"%s"`, *table)
+	default:
+		failedExit("invalid table name")
 	}
 }
 
