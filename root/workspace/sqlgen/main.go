@@ -25,10 +25,10 @@ var (
 	grouperStr = flag.String("group", "", "generate result groupers, format like: member:type;member:type...")
 
 	// calculated
-	structName, structFullName, ormName, tableStr string
-	outPkg, extFilePath                           string
-	outFile                                       *os.File
-	converterMap, grouperMap                      = make(map[string]string), make(map[string]string)
+	structName, structFullName, ormName, ormStruct, tableStr string
+	outPkg, extFilePath                                      string
+	outFile                                                  *os.File
+	converterMap, grouperMap                                 = make(map[string]string), make(map[string]string)
 )
 
 func main() {
@@ -69,7 +69,7 @@ func generateContent(file string) {
 		"structName":  structName,
 		"fullName":    structFullName,
 		"ormName":     ormName,
-		"ormStruct":   strings.ToLower(structName) + "Model",
+		"ormStruct":   ormStruct,
 		"converters":  converterMap,
 		"groupers":    grouperMap,
 	})
@@ -115,7 +115,9 @@ func checkName() {
 
 func checkOrmName() {
 	ss := strings.Split(*name, ".")
-	ormName = *ormPrefix + ss[len(ss)-1]
+	origin := ss[len(ss)-1]
+	ormName = *ormPrefix + origin
+	ormStruct = strings.ToLower(origin[0:1]) + origin[1:] + "Model" // 首字母小写
 }
 
 func checkTableStr() {
