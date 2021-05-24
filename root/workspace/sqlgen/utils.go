@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	dbHelperPkg = `"pers.drcz/tests/sqlbuilder/comm/dbhelper"`
-	ecmLogPkg   = `ecmlog "pers.drcz/tests/sqlbuilder/comm/log"`
+	dbHelperPkg = `"git.code.oa.com/IOT_EC/ecm_websvr_proj/src/comm/dbhelper"`
+	ecmLogPkg   = `"git.code.oa.com/IOT_EC/ecm_websvr_proj/src/comm/ecmlog"`
 )
 
 var (
