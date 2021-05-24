@@ -4,6 +4,7 @@ package {{ .outPkg }}
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/huandu/go-sqlbuilder"
@@ -15,28 +16,34 @@ import (
 
 // {{ .ormStruct }} is ORM struct to {{ .fullName }}
 type {{ .ormStruct }} struct {
-	ORM *dbhelper.Struct
+	ORM   *dbhelper.Struct
+	DB    *sql.DB
+	Table string
 }
 
 // {{ .ormName }} is ORM object to {{ .fullName }}
-var {{ .ormName }} = &{{ .ormStruct }}{ORM: dbhelper.NewStruct({{ .fullName }}{})}
+var {{ .ormName }} = &{{ .ormStruct }}{
+	ORM:   dbhelper.NewStruct({{ .fullName }}{}),
+	DB:    {{ .db }},
+	Table: {{ .table }},
+}
 
 // Add inserting {{ .fullName }} into database
 func (m *{{ .ormStruct }}) Add(ctx context.Context, way, tag string, objects ...interface{}) error {
 	var b *sqlbuilder.InsertBuilder
 	switch way {
 	case dbhelper.Insert:
-		b = m.ORM.InsertIntoForTag({{ .table }}, tag, objects...)
+		b = m.ORM.InsertIntoForTag(m.Table, tag, objects...)
 	case dbhelper.InsertIgnore:
-		b = m.ORM.InsertIgnoreIntoForTag({{ .table }}, tag, objects...)
+		b = m.ORM.InsertIgnoreIntoForTag(m.Table, tag, objects...)
 	case dbhelper.Replace:
-		b = m.ORM.ReplaceIntoForTag({{ .table }}, tag, objects...)
+		b = m.ORM.ReplaceIntoForTag(m.Table, tag, objects...)
 	default:
 		return fmt.Errorf("invalid insert way: %s", way)
 	}
 
 	expr, args := b.Build()
-	if _, err := m.ORM.Exec(ctx, {{ .db }}, expr, args...); err != nil {
+	if _, err := m.ORM.Exec(ctx, m.DB, expr, args...); err != nil {
 		ecmlog.ErrorEx(ctx, "Exec failed", "err", err)
 		return err
 	}
@@ -45,11 +52,11 @@ func (m *{{ .ormStruct }}) Add(ctx context.Context, way, tag string, objects ...
 
 // Delete deleting {{ .fullName }} from database
 func (m *{{ .ormStruct }}) Delete(ctx context.Context, cond dbhelper.DelCondFunc) error {
-	b := m.ORM.DeleteFrom({{ .table }})
+	b := m.ORM.DeleteFrom(m.Table)
 	cond(b)
 
 	expr, args := b.Build()
-	if _, err := m.ORM.Exec(ctx, {{ .db }}, expr, args...); err != nil {
+	if _, err := m.ORM.Exec(ctx, m.DB, expr, args...); err != nil {
 		ecmlog.ErrorEx(ctx, "Exec failed", "err", err)
 		return err
 	}
@@ -58,11 +65,11 @@ func (m *{{ .ormStruct }}) Delete(ctx context.Context, cond dbhelper.DelCondFunc
 
 // Update updating {{ .fullName }} in database
 func (m *{{ .ormStruct }}) Update(ctx context.Context, cond dbhelper.UpdateCondFunc) error {
-	b := sqlbuilder.NewUpdateBuilder().Update({{ .table }})
+	b := sqlbuilder.NewUpdateBuilder().Update(m.Table)
 	cond(b)
 
 	expr, args := b.Build()
-	if _, err := m.ORM.Exec(ctx, {{ .db }}, expr, args...); err != nil {
+	if _, err := m.ORM.Exec(ctx, m.DB, expr, args...); err != nil {
 		ecmlog.ErrorEx(ctx, "Exec failed", "err", err)
 		return err
 	}
@@ -71,12 +78,12 @@ func (m *{{ .ormStruct }}) Update(ctx context.Context, cond dbhelper.UpdateCondF
 
 // TagGet getting {{ .fullName }} from database
 func (m *{{ .ormStruct }}) TagGet(ctx context.Context, tag string, cond dbhelper.CondFunc) (*{{ .fullName }}, error) {
-	b := m.ORM.SelectFromForTag({{ .table }}, tag)
+	b := m.ORM.SelectFromForTag(m.Table, tag)
 	cond(b)
 
 	var result {{ .fullName }}
 	expr, args := b.Build()
-	if err := m.ORM.TagQueryRow(ctx, {{ .db }}, &result, tag, expr, args...); err != nil {
+	if err := m.ORM.TagQueryRow(ctx, m.DB, &result, tag, expr, args...); err != nil {
 		ecmlog.ErrorEx(ctx, "TagQueryRow failed", "err", err)
 		return nil, err
 	}
@@ -90,12 +97,12 @@ func (m *{{ .ormStruct }}) Get(ctx context.Context, cond dbhelper.CondFunc) (*{{
 
 // TagPull pulling {{ .fullName }} from database
 func (m *{{ .ormStruct }}) TagPull(ctx context.Context, tag string, cond dbhelper.CondFunc) ([]{{ .fullName }}, error) {
-	b := m.ORM.SelectFromForTag({{ .table }}, tag)
+	b := m.ORM.SelectFromForTag(m.Table, tag)
 	cond(b)
 
 	var result []{{ .fullName }}
 	expr, args := b.Build()
-	if err := m.ORM.TagQuery(ctx, {{ .db }}, &result, tag, expr, args...); err != nil {
+	if err := m.ORM.TagQuery(ctx, m.DB, &result, tag, expr, args...); err != nil {
 		ecmlog.ErrorEx(ctx, "TagQuery failed", "err", err)
 		return nil, err
 	}
