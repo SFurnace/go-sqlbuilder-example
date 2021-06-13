@@ -5,11 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/huandu/go-sqlbuilder"
 
 	ecmlog "pers.drcz/tests/sqlbuilder/comm/log"
 )
+
+var globalStructMap = new(sync.Map)
 
 // Struct 对 sqlbuilder.Struct 进行了封装，使其更易使用
 type Struct struct {
@@ -17,14 +20,19 @@ type Struct struct {
 	typ reflect.Type
 }
 
-// NewStruct ...
-func NewStruct(val interface{}) *Struct {
-	typ := reflect.TypeOf(val)
+// S ...
+func S(val interface{}) *Struct {
+	typ := dereferencedType(reflect.TypeOf(val))
 	if typ.Kind() != reflect.Struct {
-		return nil
+		panic(fmt.Errorf("invalid value: %v", val))
+	}
+	if v, ok := globalStructMap.Load(typ); ok {
+		return v.(*Struct)
 	}
 
-	return &Struct{Struct: sqlbuilder.NewStruct(val), typ: typ}
+	v := &Struct{Struct: sqlbuilder.NewStruct(reflect.New(typ).Interface()), typ: typ}
+	globalStructMap.Store(typ, v)
+	return v
 }
 
 // ScanRow ...

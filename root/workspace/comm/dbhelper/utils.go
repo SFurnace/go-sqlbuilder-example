@@ -157,6 +157,30 @@ func PullStrings(ctx context.Context, db Executor, b sqlbuilder.Builder) ([]stri
 	}
 }
 
+/* Simple SQL helper - 结构体结果查询 */
+
+// GetTagStruct 查询单个结构体
+func GetTagStruct(ctx context.Context, db Executor, tag string, out interface{}, b sqlbuilder.Builder) error {
+	expr, args := b.Build()
+	return S(out).TagQueryRow(ctx, db, out, tag, expr, args...)
+}
+
+// PullTagStructs 查询结构体slice
+func PullTagStructs(ctx context.Context, db Executor, tag string, out interface{}, b sqlbuilder.Builder) error {
+	expr, args := b.Build()
+	return S(out).TagQuery(ctx, db, out, tag, expr, args...)
+}
+
+// GetStruct 查询单个结构体
+func GetStruct(ctx context.Context, db Executor, out interface{}, b sqlbuilder.Builder) error {
+	return GetTagStruct(ctx, db, "", out, b)
+}
+
+// PullStructs 查询结构体slice
+func PullStructs(ctx context.Context, db Executor, out interface{}, b sqlbuilder.Builder) error {
+	return PullTagStructs(ctx, db, "", out, b)
+}
+
 /* SQL Execute Helper */
 
 // Query 执行查询
@@ -220,4 +244,13 @@ func TxWrapper(ctx context.Context, db *sql.DB, opts *sql.TxOptions, callback Tx
 	}
 
 	return tx.Commit()
+}
+
+/* Other Helper Functions */
+
+func dereferencedType(t reflect.Type) reflect.Type {
+	for k := t.Kind(); k == reflect.Ptr || k == reflect.Slice; k = t.Kind() {
+		t = t.Elem()
+	}
+	return t
 }

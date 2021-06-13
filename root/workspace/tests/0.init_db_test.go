@@ -11,6 +11,7 @@ import (
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/jaswdr/faker"
 
+	"pers.drcz/tests/sqlbuilder/comm/dbhelper"
 	"pers.drcz/tests/sqlbuilder/comm/log"
 )
 
@@ -86,20 +87,20 @@ func TestGenerateData(t *testing.T) {
 	nodes := generateNodes(nodeNum)
 	devices := generateDevices(deviceNum, customers, nodes)
 
-	expr, args := SCustomerEx.InsertInto(CustomerTable, sqlbuilder.Flatten(customers)...).Build()
-	_, err := SCustomerEx.Exec(ctx, DB, expr, args...)
+	expr, args := dbhelper.S(CustomerEx{}).InsertInto(CustomerTable, sqlbuilder.Flatten(customers)...).Build()
+	_, err := dbhelper.Exec(ctx, DB, expr, args...)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expr, args = SNodeEx.InsertInto(NodeTable, sqlbuilder.Flatten(nodes)...).Build()
-	_, err = SNodeEx.Exec(ctx, DB, expr, args...)
+	expr, args = dbhelper.S(NodeEx{}).InsertInto(NodeTable, sqlbuilder.Flatten(nodes)...).Build()
+	_, err = dbhelper.Exec(ctx, DB, expr, args...)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expr, args = SDeviceEx.InsertInto(DeviceTable, sqlbuilder.Flatten(devices)...).Build()
-	_, err = SDeviceEx.Exec(ctx, DB, expr, args...)
+	expr, args = dbhelper.S(DeviceEx{}).InsertInto(DeviceTable, sqlbuilder.Flatten(devices)...).Build()
+	_, err = dbhelper.Exec(ctx, DB, expr, args...)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,8 +3,6 @@ package tests
 import (
 	"encoding/json"
 	"time"
-
-	"pers.drcz/tests/sqlbuilder/comm/dbhelper"
 )
 
 /* 客户 */
@@ -28,12 +26,6 @@ type (
 		CustomerEx
 		TimeInfo
 	}
-)
-
-var (
-	SCustomer     = dbhelper.NewStruct(Customer{})
-	SCustomerEx   = dbhelper.NewStruct(CustomerEx{})
-	SCustomerFull = dbhelper.NewStruct(CustomerFull{})
 )
 
 /* 节点 */
@@ -63,12 +55,6 @@ type (
 	}
 )
 
-var (
-	SNode     = dbhelper.NewStruct(Node{})
-	SNodeEx   = dbhelper.NewStruct(NodeEx{})
-	SNodeFull = dbhelper.NewStruct(NodeFull{})
-)
-
 /* 机器 */
 
 type (
@@ -88,12 +74,6 @@ type (
 		TimeInfo
 		TerminateTime time.Time `db:"terminateTime"`
 	}
-)
-
-var (
-	SDevice     = dbhelper.NewStruct(Device{})
-	SDeviceEx   = dbhelper.NewStruct(DeviceEx{})
-	SDeviceFull = dbhelper.NewStruct(DeviceFull{})
 )
 
 /* Component */
